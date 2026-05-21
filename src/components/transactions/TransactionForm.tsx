@@ -9,6 +9,8 @@ import { calculateWorkTime } from '@/utils/calculations'
 import { compressImage, recognizeReceipt } from '@/utils/ocr'
 import type { Transaction, TransactionType, ProductivityTag, Currency } from '@/types'
 
+const TAX_TYPES = ['Withholding', 'Quarterly', 'Annual', 'Other']
+
 interface TransactionFormProps {
   onClose: () => void
   editTransaction?: Transaction
@@ -25,12 +27,14 @@ export function TransactionForm({ onClose, editTransaction }: TransactionFormPro
   const [date, setDate] = useState(editTransaction?.date ?? getToday())
   const [description, setDescription] = useState(editTransaction?.description ?? '')
   const [productivityTag, setProductivityTag] = useState<ProductivityTag>(editTransaction?.productivityTag ?? 'neutral')
+  const [taxType, setTaxType] = useState(editTransaction?.taxType ?? 'Withholding')
   const [receiptImage, setReceiptImage] = useState<string | null>(editTransaction?.receiptImage ?? null)
   const [ocrLoading, setOcrLoading] = useState(false)
+  const [ocrDetails, setOcrDetails] = useState<{ netAmount?: number; vatAmount?: number; receiptNumber?: string } | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const parsedAmount = parseFloat(amount)
-  const showWorkTime = type === 'expense' && hourlyRate > 0 && !isNaN(parsedAmount) && parsedAmount > 0 && currency === primaryCurrency
+  const showWorkTime = (type === 'expense' || type === 'tax') && hourlyRate > 0 && !isNaN(parsedAmount) && parsedAmount > 0 && currency === primaryCurrency
 
   const handleReceiptCapture = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -52,10 +56,18 @@ export function TransactionForm({ onClose, editTransaction }: TransactionFormPro
       if (result.description && !description) {
         setDescription(result.description)
       }
+      if (result.date) {
+        setDate(result.date)
+      }
+
+      // Store extracted details for display
+      setOcrDetails({
+        netAmount: result.netAmount ?? undefined,
+        vatAmount: result.vatAmount ?? undefined,
+        receiptNumber: result.receiptNumber ?? undefined,
+      })
     }
     reader.readAsDataURL(file)
-
-    // Reset input so same file can be re-selected
     e.target.value = ''
   }
 
@@ -72,7 +84,8 @@ export function TransactionForm({ onClose, editTransaction }: TransactionFormPro
       categoryId,
       date,
       description,
-      productivityTag,
+      productivityTag: type === 'expense' ? productivityTag : 'neutral',
+      ...(type === 'tax' ? { taxType } : {}),
       ...(receiptImage ? { receiptImage } : {}),
       createdAt: editTransaction?.createdAt ?? Date.now(),
     }
@@ -80,6 +93,12 @@ export function TransactionForm({ onClose, editTransaction }: TransactionFormPro
     await db.transactions.put(data)
     onClose()
   }
+
+  const typeConfig: { value: TransactionType; label: string; activeClass: string }[] = [
+    { value: 'income', label: 'Income', activeClass: 'bg-emerald-500 text-white' },
+    { value: 'expense', label: 'Expense', activeClass: 'bg-red-500 text-white' },
+    { value: 'tax', label: 'Tax', activeClass: 'bg-amber-500 text-white' },
+  ]
 
   const tagOptions: { value: ProductivityTag; label: string; color: string }[] = [
     { value: 'productive', label: 'Productive', color: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' },
@@ -92,20 +111,16 @@ export function TransactionForm({ onClose, editTransaction }: TransactionFormPro
       <form onSubmit={handleSubmit} className="space-y-4">
         {/* Type toggle */}
         <div className="flex rounded-lg bg-slate-100 dark:bg-slate-700 p-1">
-          {(['income', 'expense'] as TransactionType[]).map((t) => (
+          {typeConfig.map(({ value, label, activeClass }) => (
             <button
-              key={t}
+              key={value}
               type="button"
-              onClick={() => { setType(t); setCategoryId('') }}
-              className={`flex-1 py-2 text-sm font-medium rounded-md transition-colors capitalize ${
-                type === t
-                  ? t === 'income'
-                    ? 'bg-emerald-500 text-white'
-                    : 'bg-red-500 text-white'
-                  : 'text-slate-500'
+              onClick={() => { setType(value); setCategoryId('') }}
+              className={`flex-1 py-2 text-sm font-medium rounded-md transition-colors ${
+                type === value ? activeClass : 'text-slate-500'
               }`}
             >
-              {t}
+              {label}
             </button>
           ))}
         </div>
@@ -158,6 +173,24 @@ export function TransactionForm({ onClose, editTransaction }: TransactionFormPro
           ))}
         </select>
 
+        {/* Tax type selector */}
+        {type === 'tax' && (
+          <div className="flex rounded-lg bg-slate-100 dark:bg-slate-700 p-1">
+            {TAX_TYPES.map((t) => (
+              <button
+                key={t}
+                type="button"
+                onClick={() => setTaxType(t)}
+                className={`flex-1 py-2 text-xs font-medium rounded-md transition-colors ${
+                  taxType === t ? 'bg-white dark:bg-slate-600 shadow-sm' : 'text-slate-500'
+                }`}
+              >
+                {t}
+              </button>
+            ))}
+          </div>
+        )}
+
         {/* Date */}
         <input
           type="date"
@@ -208,7 +241,7 @@ export function TransactionForm({ onClose, editTransaction }: TransactionFormPro
                 )}
                 <button
                   type="button"
-                  onClick={() => setReceiptImage(null)}
+                  onClick={() => { setReceiptImage(null); setOcrDetails(null) }}
                   className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-red-500 text-white flex items-center justify-center"
                 >
                   <X size={10} />
@@ -216,9 +249,32 @@ export function TransactionForm({ onClose, editTransaction }: TransactionFormPro
               </div>
             )}
           </div>
+          {/* OCR extracted details */}
+          {ocrDetails && (ocrDetails.netAmount || ocrDetails.vatAmount || ocrDetails.receiptNumber) && (
+            <div className="mt-2 p-2.5 rounded-lg bg-slate-50 dark:bg-slate-700/50 text-xs space-y-1">
+              {ocrDetails.receiptNumber && (
+                <div className="flex justify-between">
+                  <span className="text-slate-400">Receipt #</span>
+                  <span className="font-medium">{ocrDetails.receiptNumber}</span>
+                </div>
+              )}
+              {ocrDetails.netAmount != null && (
+                <div className="flex justify-between">
+                  <span className="text-slate-400">Net amount</span>
+                  <span className="font-medium">{currency === 'PHP' ? '₱' : '$'}{ocrDetails.netAmount.toFixed(2)}</span>
+                </div>
+              )}
+              {ocrDetails.vatAmount != null && (
+                <div className="flex justify-between">
+                  <span className="text-slate-400">VAT / Tax</span>
+                  <span className="font-medium">{currency === 'PHP' ? '₱' : '$'}{ocrDetails.vatAmount.toFixed(2)}</span>
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
-        {/* Productivity tag */}
+        {/* Productivity tag — only for expenses */}
         {type === 'expense' && (
           <div>
             <label className="block text-sm font-medium text-slate-500 dark:text-slate-400 mb-2">Productivity</label>

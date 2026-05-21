@@ -3,18 +3,21 @@ import type { Transaction, TaxPayment, Category, Currency } from '@/types'
 export interface MonthTotals {
   income: number
   expense: number
+  tax: number
   net: number
 }
 
 export function getMonthTotals(transactions: Transaction[], currency?: Currency): MonthTotals {
   let income = 0
   let expense = 0
+  let tax = 0
   for (const t of transactions) {
     if (currency && t.currency !== currency) continue
     if (t.type === 'income') income += t.amount
+    else if (t.type === 'tax') tax += t.amount
     else expense += t.amount
   }
-  return { income, expense, net: income - expense }
+  return { income, expense, tax, net: income - expense - tax }
 }
 
 export interface CategoryBreakdown {
@@ -98,10 +101,14 @@ export function getMonthlyTrend(transactions: Transaction[], months: string[], c
   })
 }
 
-export function getTaxYTD(taxPayments: TaxPayment[], year: string, currency?: Currency): number {
-  return taxPayments
+export function getTaxYTD(taxPayments: TaxPayment[], transactions: Transaction[], year: string, currency?: Currency): number {
+  const legacyTotal = taxPayments
     .filter((t) => t.date.startsWith(year) && (!currency || t.currency === currency))
     .reduce((sum, t) => sum + t.amount, 0)
+  const txTaxTotal = transactions
+    .filter((t) => t.type === 'tax' && t.date.startsWith(year) && (!currency || t.currency === currency))
+    .reduce((sum, t) => sum + t.amount, 0)
+  return legacyTotal + txTaxTotal
 }
 
 export function getEffectiveTaxRate(taxTotal: number, incomeTotal: number): number {

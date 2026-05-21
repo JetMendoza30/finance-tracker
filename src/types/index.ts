@@ -1,10 +1,10 @@
 export type Currency = 'PHP' | 'USD'
 
-export type TransactionType = 'income' | 'expense'
+export type TransactionType = 'income' | 'expense' | 'tax'
 
 export type ProductivityTag = 'productive' | 'neutral' | 'wasteful'
 
-export type CategoryType = 'income' | 'expense'
+export type CategoryType = 'income' | 'expense' | 'tax'
 
 export interface Transaction {
   id: string
@@ -15,6 +15,7 @@ export interface Transaction {
   date: string // YYYY-MM-DD
   description: string
   productivityTag: ProductivityTag
+  taxType?: string // withholding, quarterly, annual, other
   receiptImage?: string // base64 data URL
   createdAt: number
 }

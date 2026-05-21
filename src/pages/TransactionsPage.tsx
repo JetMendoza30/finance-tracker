@@ -57,7 +57,7 @@ export function TransactionsPage() {
 
       {/* Filter */}
       <div className="flex rounded-lg bg-white dark:bg-slate-800 p-1 gap-1">
-        {(['all', 'income', 'expense'] as const).map((f) => (
+        {(['all', 'income', 'expense', 'tax'] as const).map((f) => (
           <button
             key={f}
             onClick={() => setFilterType(f)}
@@ -104,9 +104,15 @@ export function TransactionsPage() {
                         )}
                       </div>
                       <div className="text-right shrink-0">
-                        <div className={`font-semibold text-sm ${tx.type === 'income' ? 'text-income' : 'text-expense'}`}>
+                        <div className={`font-semibold text-sm ${
+                          tx.type === 'income' ? 'text-income' :
+                          tx.type === 'tax' ? 'text-tax' : 'text-expense'
+                        }`}>
                           {tx.type === 'income' ? '+' : '-'}{formatCurrency(tx.amount, tx.currency)}
                         </div>
+                        {tx.type === 'tax' && tx.taxType && (
+                          <div className="text-[10px] font-medium text-amber-500">{tx.taxType}</div>
+                        )}
                         {tx.type === 'expense' && (
                           <div className={`text-[10px] font-medium ${
                             tx.productivityTag === 'productive' ? 'text-emerald-500' :
@@ -115,7 +121,7 @@ export function TransactionsPage() {
                             {tx.productivityTag}
                           </div>
                         )}
-                        {tx.type === 'expense' && hourlyRate > 0 && tx.currency === primaryCurrency && (
+                        {(tx.type === 'expense' || tx.type === 'tax') && hourlyRate > 0 && tx.currency === primaryCurrency && (
                           <div className="text-[10px] text-slate-400 dark:text-slate-500">
                             {formatWorkTime(calculateWorkTime(tx.amount, hourlyRate).totalMinutes)}
                           </div>

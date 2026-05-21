@@ -30,7 +30,7 @@ export function DashboardPage() {
   const productivity = useMemo(() => getProductivityBreakdown(transactions, currency), [transactions, currency])
   const months = useMemo(() => getLastNMonths(6), [])
   const trend = useMemo(() => getMonthlyTrend(allTransactions, months, currency), [allTransactions, months, currency])
-  const taxYTD = useMemo(() => getTaxYTD(taxPayments, currentYear, currency), [taxPayments, currentYear, currency])
+  const taxYTD = useMemo(() => getTaxYTD(taxPayments, allTransactions, currentYear, currency), [taxPayments, allTransactions, currentYear, currency])
 
   // YTD income for effective rate
   const ytdIncome = useMemo(() => {
@@ -202,10 +202,13 @@ export function DashboardPage() {
                     <div className="text-xs text-slate-400">{formatDate(tx.date)}</div>
                   </div>
                   <div className="text-right shrink-0">
-                    <div className={`text-sm font-semibold ${tx.type === 'income' ? 'text-income' : 'text-expense'}`}>
+                    <div className={`text-sm font-semibold ${
+                      tx.type === 'income' ? 'text-income' :
+                      tx.type === 'tax' ? 'text-tax' : 'text-expense'
+                    }`}>
                       {tx.type === 'income' ? '+' : '-'}{formatCurrency(tx.amount, tx.currency)}
                     </div>
-                    {tx.type === 'expense' && hourlyRate > 0 && tx.currency === currency && (
+                    {(tx.type === 'expense' || tx.type === 'tax') && hourlyRate > 0 && tx.currency === currency && (
                       <div className="text-[10px] text-slate-400 dark:text-slate-500">
                         {formatWorkTime(calculateWorkTime(tx.amount, hourlyRate).totalMinutes)}
                       </div>

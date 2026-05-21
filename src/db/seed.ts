@@ -18,6 +18,11 @@ const DEFAULT_CATEGORIES: Category[] = [
   { id: 'freelance', name: 'Freelance', type: 'income', icon: 'laptop', color: '#14b8a6' },
   { id: 'investment', name: 'Investments', type: 'income', icon: 'trending-up', color: '#0ea5e9' },
   { id: 'other-income', name: 'Other Income', type: 'income', icon: 'plus-circle', color: '#6366f1' },
+  // Tax
+  { id: 'tax-withholding', name: 'Withholding', type: 'tax', icon: 'receipt', color: '#f59e0b' },
+  { id: 'tax-quarterly', name: 'Quarterly', type: 'tax', icon: 'calendar', color: '#d97706' },
+  { id: 'tax-annual', name: 'Annual', type: 'tax', icon: 'file-text', color: '#b45309' },
+  { id: 'tax-other', name: 'Other Tax', type: 'tax', icon: 'landmark', color: '#92400e' },
 ]
 
 const DEFAULT_SETTINGS: Setting[] = [
@@ -37,11 +42,17 @@ export async function seedDatabase() {
     return
   }
 
-  // Ensure new settings exist for existing users
+  // Ensure new settings and categories exist for existing users
   for (const setting of DEFAULT_SETTINGS) {
     const exists = await db.settings.get(setting.key)
     if (!exists) {
       await db.settings.put(setting)
+    }
+  }
+  for (const cat of DEFAULT_CATEGORIES) {
+    const exists = await db.categories.get(cat.id)
+    if (!exists) {
+      await db.categories.put(cat)
     }
   }
 }

@@ -24,7 +24,14 @@ export function TaxPage() {
   const [formDescription, setFormDescription] = useState('')
   const [formTaxType, setFormTaxType] = useState('Withholding')
 
-  const taxYTD = useMemo(() => getTaxYTD(taxPayments, year, currency), [taxPayments, year, currency])
+  const taxYTD = useMemo(() => getTaxYTD(taxPayments, allTransactions, year, currency), [taxPayments, allTransactions, year, currency])
+
+  // Tax-type transactions for this year
+  const taxTransactions = useMemo(() => {
+    return allTransactions
+      .filter((t) => t.type === 'tax' && t.date.startsWith(year))
+      .sort((a, b) => b.date.localeCompare(a.date))
+  }, [allTransactions, year])
 
   const ytdIncome = useMemo(() => {
     return allTransactions
@@ -34,15 +41,20 @@ export function TaxPage() {
 
   const effectiveRate = getEffectiveTaxRate(taxYTD, ytdIncome)
 
-  // Group by tax type
+  // Group by tax type (legacy + transaction-based)
   const byType = useMemo(() => {
     const map = new Map<string, number>()
     for (const tp of taxPayments) {
       if (tp.currency !== currency) continue
       map.set(tp.taxType, (map.get(tp.taxType) ?? 0) + tp.amount)
     }
+    for (const tx of taxTransactions) {
+      if (tx.currency !== currency) continue
+      const label = tx.taxType ?? 'Other'
+      map.set(label, (map.get(label) ?? 0) + tx.amount)
+    }
     return Array.from(map.entries()).sort((a, b) => b[1] - a[1])
-  }, [taxPayments, currency])
+  }, [taxPayments, taxTransactions, currency])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -114,15 +126,37 @@ export function TaxPage() {
         </div>
       )}
 
-      {/* Payment List */}
-      {taxPayments.length === 0 ? (
+      {/* Payment List — legacy taxPayments + tax-type transactions */}
+      {taxPayments.length === 0 && taxTransactions.length === 0 ? (
         <EmptyState
           icon={<Receipt size={48} />}
           title="No tax payments"
-          description="Add your tax payments to track your total tax burden"
+          description="Add tax payments via the + button or use the Tax type in transactions"
         />
       ) : (
         <div className="bg-white dark:bg-slate-800 rounded-xl overflow-hidden divide-y divide-slate-100 dark:divide-slate-700">
+          {taxTransactions.map((tx) => (
+            <div key={tx.id} className="flex items-center px-4 py-3 gap-3">
+              <div className="w-10 h-10 rounded-full bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center shrink-0">
+                <Receipt size={18} className="text-amber-600 dark:text-amber-400" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="text-sm font-medium">{tx.taxType ?? 'Tax'}</div>
+                <div className="text-xs text-slate-400 truncate">
+                  {formatDate(tx.date)}{tx.description ? ` \u2014 ${tx.description}` : ''}
+                </div>
+              </div>
+              <div className="text-sm font-semibold text-tax shrink-0">
+                {formatCurrency(tx.amount, tx.currency)}
+              </div>
+              <button
+                onClick={() => db.transactions.delete(tx.id)}
+                className="p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 text-slate-400 hover:text-red-500 shrink-0"
+              >
+                <Trash2 size={14} />
+              </button>
+            </div>
+          ))}
           {taxPayments.map((tp) => (
             <div key={tp.id} className="flex items-center px-4 py-3 gap-3">
               <div className="w-10 h-10 rounded-full bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center shrink-0">
