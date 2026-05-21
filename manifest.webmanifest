@@ -1,0 +1,1 @@
+{"name":"Finance Tracker","short_name":"Finance","description":"Offline-first personal finance tracker","start_url":"/finance-tracker/","display":"standalone","background_color":"#0f172a","theme_color":"#0f172a","lang":"en","scope":"/finance-tracker/","icons":[{"src":"favicon.svg","sizes":"any","type":"image/svg+xml"}]}
