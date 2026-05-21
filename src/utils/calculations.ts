@@ -1,4 +1,4 @@
-import type { Transaction, TaxPayment, Category, Budget, Currency } from '@/types'
+import type { Transaction, TaxPayment, Category, Currency } from '@/types'
 
 export interface MonthTotals {
   income: number

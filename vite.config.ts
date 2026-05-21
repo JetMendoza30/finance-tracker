@@ -5,6 +5,7 @@ import { VitePWA } from 'vite-plugin-pwa'
 import path from 'path'
 
 export default defineConfig({
+  base: '/finance-tracker/',
   plugins: [
     react(),
     tailwindcss(),
@@ -18,7 +19,7 @@ export default defineConfig({
         theme_color: '#0f172a',
         background_color: '#0f172a',
         display: 'standalone',
-        start_url: '/',
+        start_url: '/finance-tracker/',
         icons: [
           { src: 'favicon.svg', sizes: 'any', type: 'image/svg+xml' },
         ],

@@ -146,8 +146,8 @@ export function DashboardPage() {
                 <XAxis dataKey="month" tickFormatter={formatMonthLabel} tick={{ fontSize: 11 }} axisLine={false} tickLine={false} />
                 <YAxis tickFormatter={(v) => formatCompact(v, currency)} tick={{ fontSize: 11 }} axisLine={false} tickLine={false} width={50} />
                 <Tooltip
-                  formatter={(value: number) => formatCurrency(value, currency)}
-                  labelFormatter={formatMonthLabel}
+                  formatter={(value: unknown) => formatCurrency(Number(value), currency)}
+                  labelFormatter={(label: unknown) => formatMonthLabel(String(label))}
                   contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
                 />
                 <Bar dataKey="income" fill="#10b981" radius={[4, 4, 0, 0]} />

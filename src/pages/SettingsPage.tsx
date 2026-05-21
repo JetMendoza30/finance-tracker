@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Download, Upload, Sun, Moon, Monitor, Clock, ChevronRight } from 'lucide-react'
 import { db } from '@/db/database'
-import { usePrimaryCurrency, setSetting, useSetting, useWorkingHoursPerMonth, useFallbackMonthlySalary } from '@/db/hooks'
+import { usePrimaryCurrency, setSetting, useWorkingHoursPerMonth, useFallbackMonthlySalary } from '@/db/hooks'
 import { useTheme } from '@/hooks/useTheme'
 import type { Currency } from '@/types'
 
